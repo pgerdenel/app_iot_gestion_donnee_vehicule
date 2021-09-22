@@ -88,3 +88,5 @@ Il enregistre également les utilisateurs et tous leur message en base de donné
 Le serveur Web apache met à disposition une application web permet de voir en temps réeel les 
 évènements remontés par le collecteur mais également l’historique de ces évènements. Il permet 
 également de récupérer le résultat de plusieurs requêtes SQL par l’intermédiaire d’API Rest.
+
+(public version)
