@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+
+# on fait les vérifications pour gérer quand le conteneur se lancera
+# "/wait"
+
+# first arg is `-f` or `--some-option`
+if [ "${1#-}" != "$1" ]; then
+    # on attend 30sec que la bdd démarre
+    # on attend 30sec que prosody démarre
+    # = 60sec
+    # sleep 60
+	set -- apache2-foreground "$@"
+fi
+
+exec "$@"

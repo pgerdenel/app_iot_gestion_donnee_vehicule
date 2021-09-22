@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>XMPP Events WebUI</title>
+		<meta charset="UTF-8">
+		<link rel="shortcut icon" href="">
+		<link rel="shortcut icon" href="#">
+		<link rel="stylesheet" href="css/my.css" type="text/css" />
+		<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+		<script language='javascript' type='text/javascript' src='scripts/basic.js'></script>
+		<!--<script language='javascript' type='text/javascript' src='scripts/disco.js'></script>-->
+		<script type="text/javascript" src='scripts/strophe.umd.min.modif.js'></script>	  
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+		<link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+		<script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>	
+	</head>
+	<body>
+		<!--<div id='disco'></div>-->
+		<!-- ALL BODY -->
+		<div id="wrapper_all">
+			<!-- HEADER -->
+			<div id="wrapper_head">
+				<input type="checkbox" id='show_system_msg' class="glow-on-hover" data-toggle="toggle" data-on="SystemMessage_Shown" data-off="SystemMessage_Hided">
+				TRAFFIC EVENTS
+
+				<div class="head_button">
+					<!-- Button trigger modal HIST-->
+					<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalCenterh" id="show_hist">Historique</button>
+					<!-- Modal HIST -->
+					<div class="modal fade" id="exampleModalCenterh" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterhTitle" aria-hidden="true" aria-labelledby="myLargeModalLabel">
+						<div class="modal-dialog modal-lg" role="document">
+							<div class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="exampleModalLongTitle">Historique</h5>
+								<button type="button" class="btn btn-primary" id="refreshHist">Refresh</button>
+							</div>
+							<div class="modal-body" id="wrapper_hist">
+								
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+							</div>
+						</div>
+						</div>
+					</div>
+
+					<!-- Button trigger modal STATS -->
+					<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalCenter" id="show_stats">Statistics</button>
+					<!-- Modal STATS -->
+					<div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true" aria-labelledby="myLargeModalLabel">
+						<div class="modal-dialog modal-lg" role="document">
+							<div class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="exampleModalLongTitle">Statistics</h5>
+								<button type="button" class="btn btn-primary" id="refreshStats">Refresh</button>
+							</div>
+							<div class="modal-body">
+								<div class="wrapper_request">
+									<li class="result_sql_request"> Comptes utilisateurs Prosody enregistrés</li>
+									<div id="wrapper_response_req1" class="wrapper_result_sql_request"></div>
+								</div>
+								<div class="wrapper_request">
+									<li class="result_sql_request"> Nombre de véhicule ayant été enregistré dans la base</li>
+									<div id="wrapper_response_req2" class="wrapper_result_sql_request"></div>
+								</div>
+								<div class="wrapper_request">
+									<li class="result_sql_request"> Vitesse moyenne des véhicules en embouteillage</li>
+									<div id="wrapper_response_req3" class="wrapper_result_sql_request"></div>
+								</div>
+								<div class="wrapper_request">
+									<li class="result_sql_request"> Nombre d'accident enregistrés</li>
+									<div id="wrapper_response_req4" class="wrapper_result_sql_request"></div>
+								</div>
+								<div class="wrapper_request">
+									<li class="result_sql_request"> Nombre d'embouteillage enregistré</li>
+									<div id="wrapper_response_req5" class="wrapper_result_sql_request"></div>
+								</div>
+								<div class="wrapper_request">
+									<li class="result_sql_request"> Le nombre de zone surveillée</li>
+									<div id="wrapper_response_req6" class="wrapper_result_sql_request"></div>
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+							</div>
+						</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- CONTENT -->
+			<div id="wrapper_pre_content">
+				<!-- RESOURCES -->
+				<div id="wrapper_content">
+					<!-- Accident -->
+					<div class="wrapper_box">
+						<div id="wrapper_accident" class="wrapper">
+							<span class="title_box">RESOURCE ACCIDENT</span>
+							<input type='button' id='clean_accident' value='clean' class="btn btn-primary"/>
+						</div>
+						<div id="log_container_accident" class='log_container' title="Show/Hide au click">
+							<a href='#' >☇ BOSH Messages Log :</a>
+							<div id='log_accident'></div>
+						</div>
+					</div>
+					<!-- Bouchons -->
+					<div class="wrapper_box">
+						<div id="wrapper_bouchon" class="wrapper">
+							<span class="title_box">RESOURCE BOUCHON</span>
+							<input type='button' id='clean_bouchon' value='clean' class="btn btn-primary"/>
+						</div>
+						<div id="log_container_bouchon" class='log_container' title="Show/Hide au click">
+							<a href='#' >☇ BOSH Messages Log :</a>
+							<div id='log_bouchon'></div>
+						</div>
+					</div>
+				</div>
+				<!-- FREE BOSH -->
+				<div id="wrapper_content">
+					<!-- Free BOSH Service 1 -->
+					<div class="wrapper_box">
+						<div class="wrapper">
+							<div class="login" style='text-align: center'>
+								<form id='cred_free_bosh_1' name='cred'>
+									<div class="input-group form-hey">
+										<span class="title_box">FREE BOSH SERVICE 1</span>
+
+										<div class="input-group-prepend">
+											<span class="input-group-text" id="">JID:</span>
+										</div>
+										<input type='text' class='leftinput form-control' id='jid_free_bosh1' value="user_apache@localhost/accident"/>
+										
+										<div class="input-group-prepend">
+											<span class="input-group-text" id="">Password:</span>
+										</div>
+										<input type='password' class='leftinput form-control' id='pass_free_bosh1' value="test"/>
+										
+										<input type='button' id='connect_free_bosh1' value='connect' class="btn btn-primary"/>
+										<input type='button' id='clean_free_bosh1' value='clean' class="btn btn-primary"/>
+
+									</div>
+								</form>
+							</div>
+						</div>
+						<div id="log_container_free_bosh_1" class='log_container' title="Show/Hide au click">
+							<a href='#' >☇ BOSH Messages Log :</a>
+							<div id='log_free_bosh_1'></div>
+						</div>
+					</div>
+					<!-- Free BOSH Service 2 -->
+					<div class="wrapper_box">
+						<div class="wrapper">
+							<div class="login" style='text-align: center'>
+								<form id='cred_free_bosh_2' name='cred'>
+									<div class="input-group form-hey">
+										<span class="title_box">FREE BOSH SERVICE 2</span>
+
+										<div class="input-group-prepend">
+											<span class="input-group-text" id="">JID:</span>
+										</div>
+										<input type='text' class='leftinput form-control' id='jid_free_bosh2' value="user_apache@localhost/bouchon"/>
+										
+										<div class="input-group-prepend">
+											<span class="input-group-text" id="">Password:</span>
+										</div>
+										<input type='password' class='leftinput form-control' id='pass_free_bosh2' value="test"/>
+										
+										<input type='button' id='connect_free_bosh2' value='connect' class="btn btn-primary"/>
+										<input type='button' id='clean_free_bosh2' value='clean' class="btn btn-primary"/>
+
+									</div>
+								</form>
+							</div>
+						</div>
+						<div id="log_container_free_bosh_2" class='log_container' title="Show/Hide au click">
+							<a href='#' >☇ BOSH Messages Log :</a>
+							<div id='log_free_bosh_2'></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- FOOTER -->
+			<div id="wrapper_footer"><!--FOOTER--></div>
+		</div>
+	</body>
+</html>
