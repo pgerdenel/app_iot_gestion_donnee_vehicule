@@ -1,0 +1,256 @@
+version: "3.9"
+
+### INFOS ##################################################################################################
+  # Docker MySQL      : BDD           : mysqldb       https://hub.docker.com/_/mysql
+  # Docker Prosody    : Serveur XMPP  : prosodysrv    https://hub.docker.com/r/unclev/prosody-docker-extended/
+  # Docker Apache     : Serveur Web   : apache        https://hub.docker.com/_/php
+  # Docker Python     : Collecteur    : cevent        https://hub.docker.com/_/python
+  # Docker Mosquitto  : Serveur MQTT  : mosquittosrv  https://hub.docker.com/_/eclipse-mosquitto
+  # Docker Python     : Passerelle    : passerelle    https://hub.docker.com/_/python
+  # Docker Python     : Client MQTT   : clientmqtt    https://hub.docker.com/_/python
+############################################################################################################
+
+services:
+############################ MYSQL
+# Créer l'utilisateur rootdm/test
+# Créer la database 'proso' et lui donne des privilèges
+# Restaure les tables de la db 'proso' (scripts.sql)
+  mysqldb:
+    build:
+      context: ./mysql_folder/
+      dockerfile: Dockerfile
+    image: "909/db/mysql:8.0.23--debian-10"
+    # init: true
+    container_name: mysqldb
+    restart: always
+    volumes:
+      - ./mysql_folder/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh # on remplace l'entrypoint
+      - ./mysql_folder/conf:/etc/mysql/conf.d # on remplace la config (chmod -R 0444 mysql_folder/conf/)
+      - ./mysql_folder:/docker-entrypoint-initdb.d # folder des .sql automatiquement importés
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+      MYSQL_DATABASE: proso
+      MYSQL_USER: rootrm
+      MYSQL_PASSWORD: test
+      MYSQL_TCP_PORT: 3306
+      SERVICE_TAGS: mysql_db_svcTag
+      SERVICE_NAME: mysql_db_svcName  
+    entrypoint: "/usr/local/bin/docker-entrypoint.sh"  
+    command: [--default-authentication-plugin=mysql_native_password]  
+    mem_limit: 512m
+    mem_reservation: 380M
+    cpus: 0.19 
+    ports:
+      - 3306:3306  
+    networks:
+    - app-network  
+############################ PROSODY
+# Création de 4 utilisateurs
+  prosodysrv:
+    build:
+      context: ./prosody_folder/my_prosody_image/
+      dockerfile: Dockerfile
+    image: 909/srv-xmpp/prosody:0.11.6--ubuntu-16.04
+    # init: true
+    container_name: prosodysrv
+    restart: always
+    volumes:
+      - './prosody_folder/entrypoint.sh:/usr/bin/entrypoint.sh' # on remplace l'entrypoint
+      - './prosody_folder/config/:/etc/prosody/' # on remplace la config
+      # - './prosody_folder/data:/var/lib/prosody'
+      # - './prosody_folder/log:/var/log/prosody'
+      # - './prosody_folder/modules/community:/usr/lib/prosody/modules-community'
+      # - './prosody_folder/modules/custom:/usr/lib/prosody/modules-custom' 
+    working_dir: /usr/bin/
+    environment:
+        - LOCAL=admin
+        - DOMAIN=localhost
+        - PASSWORD=test
+        # - PROSODY_MODULES_ENABLED='mod1 mod2'
+        # - PROSODY_MODULES_DISABLED="mod1 mod2"
+        # - PROSODY_DEFAULT_STORAGE="sql"
+    entrypoint: "./entrypoint.sh prosody" 
+    links: 
+      - "mysqldb:mysqldb"
+    depends_on:
+      - mysqldb
+    mem_limit: 512m
+    mem_reservation: 400M
+    cpus: 0.14
+    ports:
+    - 5223:443  # client2sserver : curl failed
+    - 5222:5222 # client2sserver : curl success
+    - 5269:5269 # server2server : curl success
+    - 5347:5347 # XMPP External component port : curl failed
+    - 5280:5280 # HTTP BOSH : curl success
+    - 5281:5281 # HTTPS BOSH / websocket port : curl failed
+    networks:
+    - app-network   
+############################ APACHE
+# Mod apache activés : a2enmod headers, rewrite, proxy, proxy_http, proxy_http 
+# Mod php activés : docker php pdo
+# Interface web disponible à : http://localhost:10080 or http://localhost/index.html
+  apache:
+    build:
+      context: ./httpd_folder/my_apache_php_image/
+      dockerfile: Dockerfile
+    image: "909/srv-web/php:7.2--apache-2.4.38--debian-10"
+    # tty: true
+    # init: true
+    container_name: apache
+    restart: always
+    volumes:
+      - ./httpd_folder/docker-php-entrypoint:/usr/local/bin/docker-php-entrypoint # on remplace l'entrypoint
+      - ./httpd_folder/conf/apache2.conf:/etc/apache2/apache2.conf # on remplace la config apache
+      - ./httpd_folder/html:/var/www/html # on copie notre appli web
+      - ./httpd_folder/conf_php/php.ini-development:/usr/local/etc/php/php.ini-development # on remplace notre config php
+      - ./httpd_folder/conf_php/php.ini-production:/usr/local/etc/php/php.ini-production # on remplace notre config php
+    working_dir: /usr/local/bin/
+    entrypoint: "./docker-php-entrypoint apache2-foreground"
+    depends_on:
+      - mysqldb 
+      - prosodysrv
+    mem_limit: 128m
+    mem_reservation: 64M
+    cpus: 0.14 
+    ports:
+      - '80:80'
+    # environment:
+        # - WAIT_HOSTS=mysqldb:3306
+        # - WAIT_HOST_CONNECT_TIMEOUT=5   
+        # - WAIT_HOSTS_TIMEOUT=70
+        # - WAIT_SLEEP_INTERVAL=5 
+        # - WAIT_BEFORE_HOSTS=65      
+    networks:
+    - app-network 
+############################ COLLECTEUR EVENT
+# Transmet les messages au serveur web
+# Enregistre des évènements en db
+  cevent:
+    build:
+      context: ./collect_event_folder/
+      dockerfile: Dockerfile
+    image: "909/collecteur/python:3.2.1--debian-10" 
+    # init: true
+    container_name: cevent
+    restart: always
+    volumes:
+      - ./collect_event_folder:/collect_event_folder # on copie notre app.py et entrypoint.sh
+    working_dir: /collect_event_folder
+    command: ["./startup.sh"]
+    depends_on:
+      - mysqldb
+      - prosodysrv
+      - apache
+    mem_limit: 64m
+    mem_reservation: 32M
+    cpus: 0.19 
+    # environment:
+        # - WAIT_HOSTS=mysqldb:3306, prosodysrv:5222, prosodysrv:5280, apache:80
+        # - WAIT_HOST_CONNECT_TIMEOUT=5   
+        # - WAIT_HOSTS_TIMEOUT=80
+        # - WAIT_SLEEP_INTERVAL=5 
+        # - WAIT_BEFORE_HOSTS=70
+    networks:
+    - app-network         
+############################ MOSQUITTO
+# Serveur MQTT
+  mosquittosrv:
+    build:
+      context: ./mosquitto_folder/
+      dockerfile: Dockerfile
+    image: "909/srv-mqtt/eclipse-mosquitto:2.0.7--alpine-3.12.4"
+    # init: true
+    container_name: mosquittosrv
+    restart: always
+    volumes:
+      - ./mosquitto_folder/docker-entrypoint.sh:/docker-entrypoint.sh # on remplace l'entry point
+      - ./mosquitto_folder/config/mosquitto.conf:/mosquitto/config/mosquitto.conf # on remplace la config
+    working_dir: /
+    depends_on:
+      - mysqldb
+      - prosodysrv
+      - apache
+      - cevent
+    entrypoint: "./docker-entrypoint.sh /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf"
+    mem_limit: 64m
+    mem_reservation: 32M
+    cpus: 0.10 
+    ports:
+      - 1883:1883  
+    # environment:
+        # - WAIT_HOSTS=mysqldb:3306, prosodysrv:5222, prosodysrv:5280, apache:80
+        # - WAIT_HOST_CONNECT_TIMEOUT=5   
+        # - WAIT_HOSTS_TIMEOUT=90
+        # - WAIT_SLEEP_INTERVAL=5 
+        # - WAIT_BEFORE_HOSTS=80   
+    networks:
+    - app-network
+############################ PASSERELLE
+# Analyse et transmet les évènements (MQTT, XMPP) 
+  passerelle:
+    build:
+      context: ./passerelle_folder/
+      dockerfile: Dockerfile
+    image: "909/passerelle/python:3.2.1--debian-10"
+    # init: true
+    container_name: passerelle
+    restart: always
+    volumes:
+      - ./passerelle_folder:/passerelle_folder # on copie notre app.py et entrypoint.sh
+    working_dir: /passerelle_folder
+    command: ["./startup.sh"]
+    depends_on:
+      - mysqldb
+      - prosodysrv
+      - apache
+      - cevent
+      - mosquittosrv
+    mem_limit: 64m
+    mem_reservation: 32M
+    cpus: 0.14 
+    # environment:
+        # - WAIT_HOSTS=mysqldb:3306, prosodysrv:5222, prosodysrv:5280, apache:80, mosquittosrv:1883
+        # - WAIT_HOST_CONNECT_TIMEOUT=5   
+        # - WAIT_HOSTS_TIMEOUT=100
+        # - WAIT_SLEEP_INTERVAL=5 
+        # - WAIT_BEFORE_HOSTS=90    
+    networks:
+    - app-network          
+############################ OBJETS CONNECTÉS
+# Simule des communications d'objets connectés en générant des messages MQTT
+  clientmqtt:
+    build:
+      context: ./passerelle_folder/
+      dockerfile: Dockerfile
+    image: "909/obj-con/python:3.2.1--debian-10"
+    # init: true
+    container_name: clientmqtt
+    restart: always
+    volumes:
+      - ./client_mqtt_folder:/client_mqtt_folder # on copie le script.py et le script.sh
+    working_dir: /client_mqtt_folder
+    command: ["./startup.sh"]
+    depends_on:
+      - mysqldb
+      - prosodysrv
+      - apache
+      - cevent
+      - mosquittosrv
+      - passerelle
+    mem_limit: 64m
+    mem_reservation: 32M
+    cpus: 0.10 
+    # environment:
+        # - WAIT_HOSTS=mysqldb:3306, prosodysrv:5222, prosodysrv:5280, apache:80, mosquittosrv:1883
+        # - WAIT_HOST_CONNECT_TIMEOUT=5   
+        # - WAIT_HOSTS_TIMEOUT=110
+        # - WAIT_SLEEP_INTERVAL=5 
+        # - WAIT_BEFORE_HOSTS=100
+    networks:
+    - app-network        
+############################ NETWORK 
+# Docker Network
+networks:
+    app-network:
+        driver: bridge
