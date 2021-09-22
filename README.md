@@ -18,7 +18,7 @@ fonctionnalitées et la communication entre les différents serveurs.
 Nous utiliserons la virtualisation afin de partitionner chacune de ses entitées et de pouvoir gérer leur 
 ressources.
 
-__Technologies utilisées __
+__Technologies utilisées__
 
 __Python :__ 
 - simulation des objets connectés
